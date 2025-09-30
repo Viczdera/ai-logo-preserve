@@ -6,18 +6,15 @@ A comprehensive AI-powered system for detecting, extracting, and recomposing log
 
 ```
 ┌─────────────┐      ┌──────────────────────────────────────────┐
-│   Next.js   │◄────►│  REST API (FastAPI + Python)             │
-│  Dashboard  │      │  - OAuth2 (JWT via Supabase Auth)        │
-│  + Upload   │      │  - Rate limiting (500 images/hour/user)  │
-└─────────────┘      │  - Input validation (max 10MB, PNG/JPG)  │
-                     └──────────────────┬───────────────────────┘
-                                        │
-                     ┌──────────────────▼───────────────────────┐
-                     │  Image Ingestion Service (Go)            │
-                     │  - S3 upload with presigned URLs         │
-                     │  - Image preprocessing (resize, format)  │
-                     │  - Publishes job to RabbitMQ             │
-                     └──────────────────┬───────────────────────┘
+│   Next.js   │◄────►│  Unified Go Service                      │
+│  Dashboard  │      │  - REST API (Gin/Echo)                   │
+│  + Upload   │      │  - No authentication (dev mode)         │
+│             │      │  - Rate limiting (500 images/hour/user) │
+│             │      │  - Input validation (max 10MB, PNG/JPG)│
+│             │      │  - S3 upload with presigned URLs        │
+│             │      │  - Image preprocessing (resize, format) │
+│             │      │  - Publishes job to RabbitMQ            │
+└─────────────┘      └──────────────────┬───────────────────────┘
                                         │
                      ┌──────────────────▼───────────────────────┐
                      │  Logo Detection Worker (Python + CUDA)   │
@@ -60,8 +57,7 @@ A comprehensive AI-powered system for detecting, extracting, and recomposing log
 ## Services
 
 - **Frontend**: Next.js dashboard with upload functionality
-- **API**: FastAPI backend with authentication and rate limiting
-- **Ingestion**: Go service for image processing and job queuing
+- **Backend**: Unified Go service handling REST API, input validation, rate limiting, image ingestion, and job queuing
 - **Detection**: Python worker with YOLOv8 and SAM for logo detection
 - **Extraction**: Rust service for logo extraction using OpenCV
 - **Composition**: Python worker for logo recomposition
@@ -79,8 +75,7 @@ A comprehensive AI-powered system for detecting, extracting, and recomposing log
 Each service has its own directory with specific setup instructions:
 
 - `frontend/` - Next.js application
-- `api/` - FastAPI backend
-- `ingestion/` - Go image ingestion service
+- `backend/` - Unified Go service with REST API and image ingestion
 - `detection/` - Python logo detection worker
 - `extraction/` - Rust logo extraction service
 - `composition/` - Python logo composition worker
