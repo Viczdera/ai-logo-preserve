@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS "logos";
+DROP TABLE IF EXISTS "jobs";
