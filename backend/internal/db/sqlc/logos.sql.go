@@ -26,7 +26,7 @@ type CreateLogoParams struct {
 	BoundingBox string `json:"bounding_box"`
 	Confidence  int64  `json:"confidence"`
 	LogoType    string `json:"logo_type"`
-	S3Key       int64  `json:"s3_key"`
+	S3Key       string `json:"s3_key"`
 }
 
 func (q *Queries) CreateLogo(ctx context.Context, arg CreateLogoParams) (Logo, error) {

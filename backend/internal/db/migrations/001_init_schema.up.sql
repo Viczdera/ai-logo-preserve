@@ -1,7 +1,7 @@
 CREATE TABLE "jobs" (
   "id" bigserial UNIQUE PRIMARY KEY NOT NULL,
   "status" varchar NOT NULL,
-  "s3_key" bigserial UNIQUE NOT NULL,
+  "s3_key" varchar UNIQUE NOT NULL,
   "upload_url" varchar NOT NULL,
   "result_url" varchar ,
   "logos_found" varchar,
@@ -17,7 +17,7 @@ CREATE TABLE "logos" (
   "bounding_box" varchar NOT NULL,
   "confidence" int8 NOT NULL,
   "logo_type" varchar NOT NULL,
-  "s3_key" bigserial NOT NULL,
+  "s3_key" varchar NOT NULL,
   "created_at" timestamptz NOT NULL DEFAULT 'now()'
 );
 

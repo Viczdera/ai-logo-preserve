@@ -12,7 +12,7 @@ import (
 type Job struct {
 	ID           int64          `json:"id"`
 	Status       string         `json:"status"`
-	S3Key        int64          `json:"s3_key"`
+	S3Key        string         `json:"s3_key"`
 	UploadUrl    string         `json:"upload_url"`
 	ResultUrl    sql.NullString `json:"result_url"`
 	LogosFound   sql.NullString `json:"logos_found"`
@@ -28,6 +28,6 @@ type Logo struct {
 	BoundingBox string    `json:"bounding_box"`
 	Confidence  int64     `json:"confidence"`
 	LogoType    string    `json:"logo_type"`
-	S3Key       int64     `json:"s3_key"`
+	S3Key       string    `json:"s3_key"`
 	CreatedAt   time.Time `json:"created_at"`
 }

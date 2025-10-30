@@ -16,7 +16,7 @@ func TestCreateJob(t *testing.T) {
 	job, err := db.CreateJob(context.Background(), CreateJobParams{
 		ID:        int64(uuid.New().ID()),
 		Status:    "pending",
-		S3Key:     int64(uuid.New().ID()),
+		S3Key:     uuid.New().String(),
 		UploadUrl: uuid.New().String()[:10],
 	})
 	if err != nil {

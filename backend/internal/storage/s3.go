@@ -16,6 +16,7 @@ import (
 type Client interface {
 	UploadFile(ctx context.Context, key string, file io.Reader, size int64) (*s3.PutObjectOutput, error)
 	GetPresignedURL(ctx context.Context, key string, expiration time.Duration) (string, error)
+	GetPresignedGetURL(ctx context.Context, key string, expiration time.Duration) (string, error)
 	DeleteFile(ctx context.Context, key string) error
 }
 
@@ -71,6 +72,22 @@ func (c *S3Client) GetPresignedURL(ctx context.Context, key string, expiration t
 	}
 
 	fmt.Println(presignResult.URL)
+	return presignResult.URL, nil
+}
+
+func (c *S3Client) GetPresignedGetURL(ctx context.Context, key string, expiration time.Duration) (string, error) {
+	presignClient := s3.NewPresignClient(c.client)
+	presignResult, err := presignClient.PresignGetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(c.bucketName),
+		Key:    aws.String(key),
+	}, func(opts *s3.PresignOptions) {
+		opts.Expires = expiration
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("failed to get presigned URL for GetObject: %w", err)
+	}
+
 	return presignResult.URL, nil
 }
 

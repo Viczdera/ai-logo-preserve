@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
+	"time"
 
+	db "github.com/Viczdera/ai-logo-preserve/backend/internal/db/sqlc"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
@@ -40,25 +42,33 @@ func (s *Server) UploadImage(ctx *gin.Context) {
 	s3Key := fmt.Sprintf("original/%s/%s", jobID.String(), header.Filename)
 
 	// Upload file to S3
-	outputObj, err := s.storageClient.UploadFile(context.Background(), s3Key, file, header.Size)
+	_, err = s.storageClient.UploadFile(context.Background(), s3Key, file, header.Size)
 	if err != nil {
 		logrus.WithError(err).Error("Failed to upload file to S3")
 		ctx.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to upload file"})
 		return
 	}
 
+	// Get presigned URL for accessing the uploaded file
+	uploadURL, err := s.storageClient.GetPresignedGetURL(context.Background(), s3Key, 24*time.Hour)
+	if err != nil {
+		logrus.WithError(err).Error("Failed to get presigned URL")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to generate file URL"})
+		return
+	}
+
 	// Create job record in database
-	// job, err := s.store.CreateJob(context.Background(), db.CreateJobParams{
-	// 	ID:        jobID,
-	// 	Status:    "pending",
-	// 	S3Key:     s3Key,
-	// 	UploadUrl: db.NewNullString(outputObj.Location),
-	// })
-	// if err != nil {
-	// 	logrus.WithError(err).Error("Failed to create job in database")
-	// 	ctx.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to create job"})
-	// 	return
-	// }
+	_, err = s.store.CreateJob(context.Background(), db.CreateJobParams{
+		ID:        int64(jobID.ID()),
+		Status:    "pending",
+		S3Key:     s3Key,
+		UploadUrl: uploadURL,
+	})
+	if err != nil {
+		logrus.WithError(err).Error("Failed to create job in database")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to create job"})
+		return
+	}
 
 	// // Store job status in Redis for fast lookups
 	// err = s.storeJobStatusInRedis(&job)
@@ -72,7 +82,7 @@ func (s *Server) UploadImage(ctx *gin.Context) {
 	// 	ID:        job.ID.String(),
 	// 	Status:    job.Status,
 	// 	S3Key:     job.S3Key,
-	// 	UploadURL: outputObj.Location,
+	// 	UploadURL: uploadURL,
 	// 	CreatedAt: job.CreatedAt.Time,
 	// 	UpdatedAt: job.UpdatedAt.Time,
 	// }
@@ -91,10 +101,10 @@ func (s *Server) UploadImage(ctx *gin.Context) {
 	//}
 
 	ctx.JSON(http.StatusAccepted, gin.H{
-		"success": true,
-		"job_id":  jobID.String(),
-		"status":  "pending",
-		"message": "Image uploaded successfully. Processing started.",
-		"output":  outputObj,
+		"success":    true,
+		"job_id":     jobID.String(),
+		"status":     "pending",
+		"message":    "Image uploaded successfully. Processing started.",
+		"upload_url": uploadURL,
 	})
 }

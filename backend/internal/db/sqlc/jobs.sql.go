@@ -24,7 +24,7 @@ INSERT INTO jobs (
 type CreateJobParams struct {
 	ID        int64  `json:"id"`
 	Status    string `json:"status"`
-	S3Key     int64  `json:"s3_key"`
+	S3Key     string `json:"s3_key"`
 	UploadUrl string `json:"upload_url"`
 }
 
