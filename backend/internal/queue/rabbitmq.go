@@ -32,14 +32,12 @@ func NewRabbitMQClient(cfg utils.RabbitMQConfig) (Client, error) {
 		return nil, fmt.Errorf("failed to connect to RabbitMQ: %w", err)
 	}
 
-	// Create channel
 	channel, err := conn.Channel()
 	if err != nil {
 		conn.Close()
 		return nil, fmt.Errorf("failed to open channel: %w", err)
 	}
 
-	// Declare exchange
 	err = channel.ExchangeDeclare(
 		cfg.Exchange, // name
 		"direct",     // type
@@ -98,6 +96,7 @@ func (c *RabbitMQClient) PublishJob(job *models.Job) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal job: %w", err)
 	}
+	fmt.Printf("Published job: %s", string(body))
 
 	// Publish message
 	err = c.channel.Publish(

@@ -2,12 +2,15 @@ package api
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"net/http"
 	"slices"
+	"strconv"
 	"time"
 
 	db "github.com/Viczdera/ai-logo-preserve/backend/internal/db/sqlc"
+	"github.com/Viczdera/ai-logo-preserve/backend/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
@@ -58,7 +61,7 @@ func (s *Server) UploadImage(ctx *gin.Context) {
 	}
 
 	// Create job record in database
-	_, err = s.store.CreateJob(context.Background(), db.CreateJobParams{
+	job, err := s.store.CreateJob(context.Background(), db.CreateJobParams{
 		ID:        int64(jobID.ID()),
 		Status:    "pending",
 		S3Key:     s3Key,
@@ -70,35 +73,43 @@ func (s *Server) UploadImage(ctx *gin.Context) {
 		return
 	}
 
-	// // Store job status in Redis for fast lookups
-	// err = s.storeJobStatusInRedis(&job)
-	// if err != nil {
-	// 	logrus.WithError(err).Error("Failed to store job status in Redis")
-	// 	// Don't fail the request, just log the error
-	// }
+	// Publish job to queue for processing
+	jobModel := &models.Job{
+		ID:        strconv.FormatInt(job.ID, 10),
+		Status:    job.Status,
+		S3Key:     job.S3Key,
+		UploadURL: job.UploadUrl,
+		CreatedAt: job.CreatedAt,
+		UpdatedAt: job.UpdatedAt,
+	}
+	fmt.Printf("Job model: %+v", jobModel)
 
-	// // Publish job to queue for processing
-	// jobModel := &models.Job{
-	// 	ID:        job.ID.String(),
-	// 	Status:    job.Status,
-	// 	S3Key:     job.S3Key,
-	// 	UploadURL: uploadURL,
-	// 	CreatedAt: job.CreatedAt.Time,
-	// 	UpdatedAt: job.UpdatedAt.Time,
-	// }
+	// Set optional fields if they exist
+	if job.ResultUrl.Valid {
+		jobModel.ResultURL = job.ResultUrl.String
+	}
+	if !job.CompletedAt.IsZero() {
+		jobModel.CompletedAt = &job.CompletedAt
+	}
+	if job.ErrorMessage.Valid {
+		jobModel.Error = job.ErrorMessage.String
+	}
 
-	// err = s.queueClient.PublishJob(jobModel)
-	// if err != nil {
-	// 	logrus.WithError(err).Error("Failed to publish job to queue")
-	// 	// Update job status to failed
-	// 	s.queries.UpdateJobError(context.Background(), db.UpdateJobErrorParams{
-	// 		ID:           jobID,
-	// 		Status:       "failed",
-	// 		ErrorMessage: db.NewNullString("Failed to queue job for processing"),
-	// 	})
-	// 	ctx.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to queue job"})
-	// 	return
-	//}
+	err = s.queueClient.PublishJob(jobModel)
+	if err != nil {
+		logrus.WithError(err).Error("Failed to publish job to queue")
+		// Update job status to failed
+		_, updateErr := s.store.UpdateJobError(context.Background(), db.UpdateJobErrorParams{
+			ID:           job.ID,
+			Status:       "failed",
+			ErrorMessage: sql.NullString{String: "Failed to queue job for processing", Valid: true},
+		})
+		if updateErr != nil {
+			logrus.WithError(updateErr).Error("Failed to update job status after queue publish failure")
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to queue job"})
+		return
+	}
 
 	ctx.JSON(http.StatusAccepted, gin.H{
 		"success":    true,
